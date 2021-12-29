@@ -72,13 +72,14 @@ void ResultDataAnalyze::on_PathButton_clicked()
 
      QString DirPath =dir->QDir::absolutePath();
      QStringList l1=dir->entryList(QDir::Dirs,QDir::Name); //获取当前文件夹的数量
-     for (int i = 0;i < l1.size(); i++)
+     sort(l1);//排序文件**需要文件分隔后为整数
+     for (int i = 0;i < nl1.size(); i++)
      {
-       if("." == l1.at(i) || ".." == l1.at(i))//过滤.和..隐藏文件
-           continue;
-       FilePathlist.append(DirPath+"/"+l1.at(i)+"/"+SetFileName);//拼接路径
-       Filenamelist.append(l1.at(i));
-       ui->InforEdit_1->append(l1.at(i));
+       QString fliename = Findfliename(nl1.at(i),l1);
+       qDebug()<<"fliename"<<fliename;
+       FilePathlist.append(DirPath+"/"+fliename+"/"+SetFileName);//拼接路径
+       Filenamelist.append(fliename);
+       ui->InforEdit_1->append(fliename);
        dircount_1 = dircount_1 + 1;
      }
      DisPlayTip("开始读取第一个log数据");
@@ -94,7 +95,39 @@ void ResultDataAnalyze::on_PathButton_clicked()
          DisPlayTip("读取失败");
      }
 }
+QString ResultDataAnalyze::Findfliename(int nlist, QStringList list)
+{
+    QStringList l1;
+    QString fliename;
 
+    for (int i = 0; i < list.size(); i++) {
+        if("." == list.at(i) || ".." == list.at(i))//过滤.和..隐藏文件
+            continue;
+        l1.clear();
+        fliename = list.at(i);
+        l1 = fliename.split("_");
+        if(nlist == l1.at(1).toInt())
+            return fliename;
+    }
+
+}
+void ResultDataAnalyze::sort(QStringList list)
+{
+    QStringList l1;
+    QString str;
+    nl1.clear();
+    for(int i = 0; i < list.size(); i++){
+        if("." == list.at(i) || ".." == list.at(i))//过滤.和..隐藏文件
+            continue;
+        l1.clear();
+        str = list.at(i);
+        l1 = str.split("_");
+        nl1.append(l1.at(1).toInt());
+    }
+    qSort(nl1.begin(),nl1.end());
+    qDebug()<<"qsort"<<nl1;
+
+}
 
 //读取log2
 void ResultDataAnalyze::on_PathButton_1_clicked()
@@ -137,13 +170,14 @@ void ResultDataAnalyze::on_PathButton_1_clicked()
 
     QString DirPath =dir_2->QDir::absolutePath();
     QStringList l1=dir_2->entryList(QDir::Dirs,QDir::Name); //获取当前文件夹的数量
-     for (int i = 0;i < l1.size(); i++)
+    sort(l1);//排序文件**需要文件分隔后为整数
+     for (int i = 0;i < nl1.size(); i++)
     {
-       if("." == l1.at(i) || ".." == l1.at(i))//过滤.和..隐藏文件
-           continue;
-       FilePathlist_2.append(DirPath+"/"+l1.at(i)+"/"+SetFileName);//拼接路径
-       Filenamelist_2.append(l1.at(i));
-       ui->InforEdit_2->append(l1.at(i));
+       QString fliename = Findfliename(nl1.at(i),l1);
+       qDebug()<<"fliename"<<fliename;
+       FilePathlist_2.append(DirPath+"/"+fliename+"/"+SetFileName);//拼接路径
+       Filenamelist_2.append(fliename);
+       ui->InforEdit_2->append(fliename);
        dircount_2 = dircount_2 + 1;
 
      }
@@ -216,12 +250,15 @@ void ResultDataAnalyze::on_StartButton_clicked()
 
     try {
         int row = 1;
-        int defectcount;
+        int defectcount;//差异数量计数
+        int nRestul = 0;
         int H = 0;
         for(int i = 0 ; i < dircount_1; i++)
         {
+            tip = QString::number(i);
             row = row + 1;
             defectcount = 0;
+            nRestul  = 0 ;
             list1.clear();
             list2.clear();
             filename1 = Filenamelist.at(i);
@@ -233,11 +270,11 @@ void ResultDataAnalyze::on_StartButton_clicked()
             recrdlog->strlog += Filenamelist.at(i) + " ** " + Filenamelist_2.at(i) + "\n";
             qDebug()<<filename1;
             qDebug()<<filename2;
-            setData(0,row, Filenamelist.at(i) + ":" + Filenamelist_2.at(i));
+            setData(0,row, Filenamelist.at(i) + ";" + Filenamelist_2.at(i));
             if(filename1 != filename2)
             {
                 DisPlayTip(filename1+" ** "+ tip +" "+ filename2 +" 不匹配 ");
-                return;
+//                return;
             }
 
             mainKeylist1.clear();
@@ -253,11 +290,19 @@ void ResultDataAnalyze::on_StartButton_clicked()
                    strname2 = mainValuelist2.at(x);
                    if(strname1 != strname2){
 
-                       DisPlayTip(filename1+" ** "+ tip +" "+ mainKeylist1.at(x) +" 不匹配 ");
-                       setData(H + x,row, strname1 + ":" + strname2);
+                       DisPlayTip(filename1+" ** mainKey "+ QString::number(H + x) +" "+ mainKeylist1.at(x) +" 不匹配 ");
+                       setData(H + x,row, strname1 + ";" + strname2);
                        defectcount++;
+
+                       if("Result" == mainKeylist1.at(x)){
+                            nRestul = 1;
+                       }
                    }
                }
+               if(1 == nRestul)
+                   DisPlayTip("Result 数量不一致");
+                   setData(1,row, QString::number(defectcount));
+                   continue;
             }
 
             inforarrayKey.clear();
@@ -285,20 +330,20 @@ void ResultDataAnalyze::on_StartButton_clicked()
                                    strname2 = inforarrayValuelist2.at(x);
 
                                        if(strname1 != strname2){
-                                           DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ inforarrayKeylist.at(x) +" 不匹配 ");
-                                           setData(H + x,row, ReCt+" -> "+strname1 + ":" + strname2+"\n");
+                                           DisPlayTip(filename1+" ** inforarrayKey "+ QString::number(H + x) +" "+ inforarrayKeylist.at(x) +" 不匹配 ");
+                                           setData(H + x,row, ReCt+" -> "+strname1 + ";" + strname2+"\n");
                                            defectcount++;
                                         }
                                 }
                           }
                     }
              }
-             else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("inforarray 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-             }
+//             else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("inforarray 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//             }
             AttachInfoKey.clear();
             AttachInfoValue1.clear();
             AttachInfoValue2.clear();
@@ -324,20 +369,20 @@ void ResultDataAnalyze::on_StartButton_clicked()
 
                             if(strname1 != strname2){
 
-                                DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ AttachInfoKeylist.at(x) +" 不匹配 ");
-                                setData(H + x,row, ReCt+" -> " + strname1 + ":" + strname2+"\n");
+                                DisPlayTip(filename1+" ** AttachInfoKey "+  QString::number(H + x) +" "+ AttachInfoKeylist.at(x) +" 不匹配 ");
+                                setData(H + x,row, ReCt+" -> " + strname1 + ";" + strname2+"\n");
                                 defectcount++;
                             }
                        }
                   }
                }
             }
-            else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("AttachInfo 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-            }
+//            else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("AttachInfo 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//            }
 
             RotatedRectKey.clear();
             RotatedRectValue1.clear();
@@ -362,20 +407,20 @@ void ResultDataAnalyze::on_StartButton_clicked()
                              strname1 = RotatedRect1.at(x);
                              strname2 = RotatedRect2.at(x);
                              if(strname1 != strname2){
-                                 DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ RotatedRectKeylist.at(x) +" 不匹配  ");
-                                 setData(H + x,row, ReCt+" -> " + strname1 + ":" + strname2+"\n");
+                                 DisPlayTip(filename1+" ** RotatedRectKey "+ QString::number(H + x) +" "+ RotatedRectKeylist.at(x) +" 不匹配  ");
+                                 setData(H + x,row, ReCt+" -> " + strname1 + ";" + strname2+"\n");
                                  defectcount++;
                              }
                          }
                      }
                 }
             }
-            else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("RotatedRect 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-            }
+//            else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("RotatedRect 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//            }
             setData(1,row, QString::number(defectcount));
         }
 
@@ -440,45 +485,40 @@ void ResultDataAnalyze::on_pushButton_clicked()
 
       QString DirPath =dirlog->QDir::absolutePath();
       QStringList l1=dirlog->entryList(QDir::Dirs,QDir::Name); //获取当前文件夹的数量
+      sort(l1);//排序文件**需要文件分隔后为整数
       for (int i = 0;i < l1.size(); i++)
      {
        if("." == l1.at(i) || ".." == l1.at(i))//过滤.和..隐藏文件
            continue;
        Filenamelistlog.append(l1.at(i));
      }
-      LogNamelist.clear();
-      QString  filename;
-      QStringList filenamelist;
-      for(int j = 0 ; j < Filenamelistlog.count(); j++){  //分割文件夹名
-          filename = Filenamelistlog.at(j);
-          filenamelist.clear();
-          filenamelist = filename.split("_");
-          LogNamelist.append(filenamelist.at(1));
-      }
-      for(int i = 0 ; i < LogNamelist.count(); i++){      //去掉重文件名
-        for(int j = i + 1; j < LogNamelist.count(); j++){
-            if(LogNamelist.at(i) == LogNamelist.at(j)){
-                LogNamelist.removeAt(j);
+      for(int i = 0 ; i < nl1.count(); i++){      //去掉重文件名
+        for(int j = i + 1; j < nl1.count(); j++){
+            if(nl1.at(i) == nl1.at(j)){
+                nl1.removeAt(j);
                 j--;
             }
         }
       }
-     qDebug()<<LogNamelist;
+      QString filename;
+      QStringList filenamelist;
+     qDebug()<<nl1;
      NameCountlist.clear();
      Namelist.clear();
      int count;
-     for(int i = 0; i < LogNamelist.count(); i++){
+     for(int i = 0; i < nl1.count(); i++){
          count = 0;
-         for(int j = 0 ; j < Filenamelistlog.count(); j++){  //根据文件名读取log数据
+         for(int j = 0 ; j < Filenamelistlog.count(); j++){  //算出相同文件名有多少
              filename = Filenamelistlog.at(j);
              filenamelist.clear();
              filenamelist = filename.split("_");
-             if(filenamelist.at(1) == LogNamelist.at(i)) {
+             if(filenamelist.at(1).toInt() == nl1.at(i)) {
                 count = count + 1;
              }
          }
          NameCountlist.append(QString::number(count));
      }
+
 
      qDebug()<<NameCountlist.count();
      int namecount = 0;
@@ -492,12 +532,12 @@ void ResultDataAnalyze::on_pushButton_clicked()
                  filename = Filenamelistlog.at(j);
                  filenamelist.clear();
                  filenamelist = filename.split("_");
-                 if(filenamelist.at(1) == LogNamelist.at(i)) {
-                    FilePathlistlog.append(DirPath+"/"+Filenamelistlog.at(j)+"/"+SetFileName);//拼接路径
-                    ui->InforEdit_1->append(Filenamelistlog.at(j));
-                    Namelist.append(Filenamelistlog.at(j));
+                     if(filenamelist.at(1).toInt() == nl1.at(i)) {
+                        FilePathlistlog.append(DirPath+"/"+Filenamelistlog.at(j)+"/"+SetFileName);//拼接路径
+                        ui->InforEdit_1->append(Filenamelistlog.at(j));
+                        Namelist.append(Filenamelistlog.at(j));
+                     }
                  }
-             }
          }
      }
 
@@ -789,6 +829,7 @@ void ResultDataAnalyze::ResultDataCompared()
 
     try {
         int dircount = 0;
+        int nRestul = 0;
         int i = 0;
         int row = 1;
         int defectcount;
@@ -813,11 +854,11 @@ void ResultDataAnalyze::ResultDataCompared()
             recrdlog->strlog +=Namelist.at(i) + " ** " + Namelist.at(k) + "\n";
             qDebug()<<Namelist.at(i)<< i << k ;
             qDebug()<<Namelist.at(k)<< i << k ;
-            setData(0,row, Namelist.at(i) + ":" + Namelist.at(k));
+            setData(0,row, Namelist.at(i) + ";" + Namelist.at(k));
             if(filename1 != filename2)
             {
                 DisPlayTip(filename1+" ** "+ tip +" "+ filename2 +" 不匹配 ");
-                return;
+//                return;
             }
 
              mainKeylist1.clear();
@@ -834,10 +875,17 @@ void ResultDataAnalyze::ResultDataCompared()
                     if(strname1 != strname2){
 
                         DisPlayTip( filename1+" ** "+ tip +" "+ mainKeylist1.at(x) +" 不匹配 ");
-                        setData(H + x,row, strname1 + ":" + strname2);
+                        setData(H + x,row, strname1 + ";" + strname2);
                         defectcount++;
+                        if("Result" == mainKeylist1.at(x)){
+                             nRestul = 1;
+                        }
                     }
                 }
+                if(1 == nRestul)
+                    DisPlayTip("Result 数量不一致");
+                    setData(1,row, QString::number(defectcount));
+                    continue;
             }
             inforarrayKey.clear();
             inforarray1.clear();
@@ -865,19 +913,19 @@ void ResultDataAnalyze::ResultDataCompared()
 
                                        if(strname1 != strname2){
                                            DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ inforarrayKeylist.at(x) +" 不匹配 ");
-                                           setData(H + x,row, ReCt+" -> "+strname1 + ":" + strname2+"\n");
+                                           setData(H + x,row, ReCt+" -> "+strname1 + ";" + strname2+"\n");
                                            defectcount++;
                                         }
                                 }
                           }
                     }
              }
-             else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("inforarray 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-             }
+//             else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("inforarray 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//             }
 
             AttachInfoKey.clear();
             AttachInfoValue1.clear();
@@ -904,19 +952,19 @@ void ResultDataAnalyze::ResultDataCompared()
 
                             if(strname1 != strname2){
                                 DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ AttachInfoKeylist.at(x) +" 不匹配 ");
-                                setData(H + x,row, ReCt+" -> " + strname1 + ":" + strname2+"\n");
+                                setData(H + x,row, ReCt+" -> " + strname1 + ";" + strname2+"\n");
                                 defectcount++;
                             }
                        }
                   }
                }
             }
-            else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("AttachInfo 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-            }
+//            else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("AttachInfo 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//            }
 
             RotatedRectKey.clear();
             RotatedRectValue1.clear();
@@ -942,19 +990,19 @@ void ResultDataAnalyze::ResultDataCompared()
                              strname2 = RotatedRect2.at(x);
                              if(strname1 != strname2){
                                  DisPlayTip(filename1+" ** "+ tip + " " + QString::number(H + x) +" "+ RotatedRectKeylist.at(x) +" 不匹配 ");
-                                 setData(H + x,row, ReCt+" -> " + strname1 + ":" + strname2+"\n");
+                                 setData(H + x,row, ReCt+" -> " + strname1 + ";" + strname2+"\n");
                                  defectcount++;
                              }
                          }
                      }
                 }
             }
-            else {
-                //報錯缺陷信息數目不一致
-                DisPlayTip("RotatedRect 差异数量不一致");
-                setData(1,row, QString::number(defectcount));
-                continue;
-            }
+//            else {
+//                //報錯缺陷信息數目不一致
+//                DisPlayTip("RotatedRect 差异数量不一致");
+//                setData(1,row, QString::number(defectcount));
+//                continue;
+//            }
             setData(1,row, QString::number(defectcount));
 
           }

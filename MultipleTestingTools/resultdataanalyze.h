@@ -60,6 +60,8 @@ public:
     QString StrData;
 
     void DisPlayTip(QString strTip);
+    void sort(QStringList list);
+    QString Findfliename(int nlist,QStringList list);
 signals:
     void Startsignal();
     void CloseResultDataAnlyze();//关闭窗口
@@ -89,7 +91,7 @@ private:
 
     QString filePath ;
 
-
+    QList<int> nl1;
 
     //************************ Result *******************//
     //文件1
